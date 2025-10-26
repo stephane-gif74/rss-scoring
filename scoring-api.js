@@ -1,6 +1,3 @@
-// API de scoring pour articles RSS
-// Déploiement : Vercel (gratuit)
-
 export default async function handler(req, res) {
   try {
     // Vérifie la méthode HTTP
