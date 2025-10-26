@@ -1,7 +1,13 @@
+// API de scoring pour articles RSS
+// Déploiement : Vercel (gratuit)
+
 export default async function handler(req, res) {
+  console.log("🟢 Nouvelle requête reçue sur /api/scoring avec méthode :", req.method);
+
   try {
     // Vérifie la méthode HTTP
     if (req.method !== "POST") {
+      console.warn("⚠️ Méthode non autorisée :", req.method);
       return res.status(405).json({ error: "Method not allowed" });
     }
 
@@ -11,14 +17,18 @@ export default async function handler(req, res) {
       rawBody += chunk;
     }
 
-    // 🔍 LOGS POUR DIAGNOSTIC
-    console.log("RAW BODY ===>", rawBody);
+    console.log("📩 RAW BODY reçu ===>", rawBody || "(vide)");
 
-    // Parse du JSON reçu
-    const data = JSON.parse(rawBody || "{}");
+    // Tentative de parsing JSON
+    let data = {};
+    try {
+      data = JSON.parse(rawBody || "{}");
+    } catch (parseErr) {
+      console.error("❌ Erreur lors du JSON.parse :", parseErr);
+      return res.status(400).json({ error: "Invalid JSON format", rawBody });
+    }
 
-    // 🔍 LOGS POUR DIAGNOSTIC
-    console.log("PARSED BODY ===>", data);
+    console.log("✅ PARSED BODY ===>", data);
 
     // Nettoyage du texte
     const clean = (text) =>
@@ -27,6 +37,8 @@ export default async function handler(req, res) {
     const titre = clean(data.titre);
     const description = clean(data.description);
     const date = data.date || "";
+
+    console.log("🧩 Données nettoyées :", { titre, description, date });
 
     // Séparation des mots et comptage
     const mots = `${titre} ${description}`.split(/\s+/).filter(Boolean);
@@ -45,9 +57,11 @@ export default async function handler(req, res) {
       "collective",
     ];
 
-    // Calcul du score : +10 points par mot-clé trouvé
+    // Calcul du score
     const score =
       mots.filter((mot) => motsClefs.includes(mot.toLowerCase())).length * 10;
+
+    console.log("📊 Score calculé :", score);
 
     // Réponse JSON
     return res.status(200).json({
