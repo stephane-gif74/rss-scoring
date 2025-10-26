@@ -2,33 +2,33 @@
 // Déploiement : Vercel (gratuit)
 
 export default async function handler(req, res) {
-  console.log("🟢 Nouvelle requête reçue sur /api/scoring avec méthode :", req.method);
+  console.log("Nouvelle requête reçue sur /api/scoring avec méthode :", req.method);
 
   try {
-    // Vérifie la méthode HTTP
     if (req.method !== "POST") {
-      console.warn("⚠️ Méthode non autorisée :", req.method);
+      console.warn("Méthode non autorisée :", req.method);
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Lecture manuelle du body (Vercel ne le parse pas automatiquement)
+    // Lecture manuelle du body complet
     let rawBody = "";
     for await (const chunk of req) {
       rawBody += chunk;
     }
 
-    console.log("📩 RAW BODY reçu ===>", rawBody || "(vide)");
+    console.log("RAW BODY reçu (début) ===>", rawBody.slice(0, 200));
 
-    // Tentative de parsing JSON
+    // Nettoyage des caractères de contrôle illégaux
+    const safeBody = rawBody.replace(/[\u0000-\u001F]+/g, "");
     let data = {};
     try {
-      data = JSON.parse(rawBody || "{}");
-    } catch (parseErr) {
-      console.error("❌ Erreur lors du JSON.parse :", parseErr);
-      return res.status(400).json({ error: "Invalid JSON format", rawBody });
+      data = JSON.parse(safeBody);
+    } catch (err) {
+      console.error("Erreur JSON.parse malgré nettoyage :", err);
+      return res.status(400).json({ error: "Invalid JSON content" });
     }
 
-    console.log("✅ PARSED BODY ===>", data);
+    console.log("PARSED BODY (clés) ===>", Object.keys(data));
 
     // Nettoyage du texte
     const clean = (text) =>
@@ -38,13 +38,10 @@ export default async function handler(req, res) {
     const description = clean(data.description);
     const date = data.date || "";
 
-    console.log("🧩 Données nettoyées :", { titre, description, date });
-
-    // Séparation des mots et comptage
+    // Calcul du score
     const mots = `${titre} ${description}`.split(/\s+/).filter(Boolean);
     const nbMotsTotal = mots.length;
 
-    // Liste de mots-clés de scoring
     const motsClefs = [
       "management",
       "leadership",
@@ -54,26 +51,24 @@ export default async function handler(req, res) {
       "stratégie",
       "performance",
       "intelligence",
-      "collective",
+      "collective"
     ];
 
-    // Calcul du score
     const score =
       mots.filter((mot) => motsClefs.includes(mot.toLowerCase())).length * 10;
 
-    console.log("📊 Score calculé :", score);
+    console.log("Score calculé :", score);
 
-    // Réponse JSON
     return res.status(200).json({
       score,
       mots_clefs_trouves: mots.filter((mot) =>
         motsClefs.includes(mot.toLowerCase())
       ),
       nb_mots_total: nbMotsTotal,
-      date,
+      date
     });
   } catch (error) {
-    console.error("❌ Erreur API scoring :", error);
+    console.error("Erreur API scoring :", error);
     return res.status(500).json({ error: error.message });
   }
 }
