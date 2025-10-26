@@ -14,8 +14,14 @@ export default async function handler(req, res) {
       rawBody += chunk;
     }
 
+    // 🔍 LOGS POUR DIAGNOSTIC
+    console.log("RAW BODY ===>", rawBody);
+
     // Parse du JSON reçu
     const data = JSON.parse(rawBody || "{}");
+
+    // 🔍 LOGS POUR DIAGNOSTIC
+    console.log("PARSED BODY ===>", data);
 
     // Nettoyage du texte
     const clean = (text) =>
@@ -25,10 +31,11 @@ export default async function handler(req, res) {
     const description = clean(data.description);
     const date = data.date || "";
 
-    // Calcul
+    // Séparation des mots et comptage
     const mots = `${titre} ${description}`.split(/\s+/).filter(Boolean);
     const nbMotsTotal = mots.length;
 
+    // Liste de mots-clés de scoring
     const motsClefs = [
       "management",
       "leadership",
@@ -38,13 +45,14 @@ export default async function handler(req, res) {
       "stratégie",
       "performance",
       "intelligence",
-      "collective"
+      "collective",
     ];
 
+    // Calcul du score : +10 points par mot-clé trouvé
     const score =
       mots.filter((mot) => motsClefs.includes(mot.toLowerCase())).length * 10;
 
-    // Réponse finale
+    // Réponse JSON
     return res.status(200).json({
       score,
       mots_clefs_trouves: mots.filter((mot) =>
@@ -54,7 +62,7 @@ export default async function handler(req, res) {
       date,
     });
   } catch (error) {
-    console.error("Erreur API scoring :", error);
+    console.error("❌ Erreur API scoring :", error);
     return res.status(500).json({ error: error.message });
   }
 }
