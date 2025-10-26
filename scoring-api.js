@@ -1,5 +1,5 @@
 // API de scoring pour articles RSS
-// Déploiement : Vercel (gratuit)
+// Déploiement : Vercel (sans émojis)
 
 export default async function handler(req, res) {
   console.log("Nouvelle requête reçue sur /api/scoring avec méthode :", req.method);
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Lecture manuelle du body complet
+    // Lecture manuelle du body
     let rawBody = "";
     for await (const chunk of req) {
       rawBody += chunk;
@@ -18,19 +18,23 @@ export default async function handler(req, res) {
 
     console.log("RAW BODY reçu (début) ===>", rawBody.slice(0, 200));
 
-    // Nettoyage des caractères de contrôle illégaux
-    const safeBody = rawBody.replace(/[\u0000-\u001F]+/g, "");
+    // Tolérance : essayer de parser, sinon fallback
     let data = {};
     try {
-      data = JSON.parse(safeBody);
-    } catch (err) {
-      console.error("Erreur JSON.parse malgré nettoyage :", err);
-      return res.status(400).json({ error: "Invalid JSON content" });
+      data = JSON.parse(rawBody);
+    } catch {
+      // tentative de correction automatique des guillemets brisés
+      const safeBody = rawBody.replace(/"([^"]*)":\s*"([^"]*")/g, (m) =>
+        m.replace(/"/g, "'")
+      );
+      try {
+        data = JSON.parse(safeBody);
+      } catch (err) {
+        console.error("Erreur JSON.parse :", err);
+        return res.status(400).json({ error: "Invalid JSON content" });
+      }
     }
 
-    console.log("PARSED BODY (clés) ===>", Object.keys(data));
-
-    // Nettoyage du texte
     const clean = (text) =>
       text?.replace(/[^\w\s]/gi, "").toLowerCase() || "";
 
@@ -38,7 +42,6 @@ export default async function handler(req, res) {
     const description = clean(data.description);
     const date = data.date || "";
 
-    // Calcul du score
     const mots = `${titre} ${description}`.split(/\s+/).filter(Boolean);
     const nbMotsTotal = mots.length;
 
@@ -51,13 +54,11 @@ export default async function handler(req, res) {
       "stratégie",
       "performance",
       "intelligence",
-      "collective"
+      "collective",
     ];
 
     const score =
       mots.filter((mot) => motsClefs.includes(mot.toLowerCase())).length * 10;
-
-    console.log("Score calculé :", score);
 
     return res.status(200).json({
       score,
@@ -65,7 +66,7 @@ export default async function handler(req, res) {
         motsClefs.includes(mot.toLowerCase())
       ),
       nb_mots_total: nbMotsTotal,
-      date
+      date,
     });
   } catch (error) {
     console.error("Erreur API scoring :", error);
