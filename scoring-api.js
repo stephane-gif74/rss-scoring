@@ -55,24 +55,3 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ score, mots_clefs: "", nb_mots_total: tE + tM + tF + dE + dM + dF });
 }
-```
-
-4. **Commit**
-
-Vercel redéploie auto en 30 sec.
-
-**Dans Make M17**, simplifie :
-
-**Variable 1 :**
-```
-{{14.article_titre}}
-```
-
-**Variable 2 :**
-```
-{{14.article_description}}
-```
-
-**Variable 3 :**
-```
-{{14.article_date}}
